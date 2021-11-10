@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="39bbd4c8-fed6-4508-b14d-69575ba44344" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="Ethiopia*1"/>
+	</db:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="ea4d5b96-e0d2-4695-b07d-b77f44aa504b" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="databaseprojectFlow" doc:id="36d46b64-57ea-4f57-b6bd-66fd39bd3bd8" >
+		<http:listener doc:name="Listener" doc:id="2b1165e8-51cb-402c-a654-ec6641a40be3" config-ref="HTTP_Listener_config" path="/db"/>
+		<db:select doc:name="Select" doc:id="db658f73-81f0-4c86-8f92-32537911525b" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM sql_store.customers
+WHERE points >3000]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="8698b320-2d2a-4357-9621-6a6a72838cc2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv
+
+---
+payload ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="clientInvoices" doc:id="27b9ba66-7ffc-458b-8bcb-7ab3f6611e02" >
+		<http:listener doc:name="Listener" doc:id="d548c737-589e-4da4-929d-dee1340b8f30" config-ref="HTTP_Listener_config" path="/customer"/>
+		<db:select doc:name="Select" doc:id="ef2ea141-e6f7-4348-a54c-789810d75769" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT client_id
+FROM sql_invoicing.clients
+WHERE name = :name
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{name:payload.name}]]]></db:input-parameters>
+		</db:select>
+		<db:select doc:name="Select" doc:id="fdb4df64-0304-492a-9eb5-82a4ad11f09f" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * 
+FROM sql_invoicing.invoices
+WHERE client_id=:client_id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{client_id:payload[0].client_id}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="3aa93672-3b2a-4a56-96c1-c07a444d4121">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="DeleteStudent" doc:id="6c8c5fea-a373-4989-9e45-9adadcb06d12" >
+		<http:listener doc:name="Listener" doc:id="050f830f-99ae-4d4b-859b-907fa9ae8178" config-ref="HTTP_Listener_config" path="/delete"/>
+		<set-variable value='#[payload.first_name ++" " ++ payload.last_name]' doc:name="Set Variable" doc:id="20117120-5fc3-44f8-adea-266e56654bde" variableName="name"/>
+		<db:delete doc:name="Delete" doc:id="9ffb3d78-62cc-4a91-a1cb-cd9b30100955" config-ref="Database_Config">
+			<db:sql ><![CDATA[DELETE
+FROM school.students
+WHERE first_name = :first_name AND last_name = :last_name ]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{first_name: payload.first_name,
+last_name:payload.last_name
+
+}]]]></db:input-parameters>
+		</db:delete>
+		<choice doc:name="Choice" doc:id="5548044e-d526-4e74-9714-529f0091a905" >
+			<when expression="#[payload !=0]">
+				<ee:transform doc:name="Transform Message" doc:id="1c682a48-09c2-4066-9023-c5cdb7ba2aa3">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "student: "++ vars.name as String ++" "++"DELETED."
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="5e5c0c7a-37c6-4d4f-88af-6932e9a9d391" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "student: "++ vars.name as String ++" "++"Not found in record.."
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="InsertStudentInfo" doc:id="bc30a15d-f6e1-40b2-b278-446207b1864c" >
+		<http:listener doc:name="Listener" doc:id="4bc58207-35b1-44c1-b669-b61fbcd1f857" config-ref="HTTP_Listener_config" path="/insert"/>
+		<db:insert doc:name="Insert" doc:id="f13e8eae-c8f8-4877-aff1-6d1b6b786383" config-ref="Database_Config">
+			<db:sql ><![CDATA[INSERT INTO
+ 	school.students(first_name,last_name,email,date_registred)
+	VALUES(:first_name,:last_name,:email,DATE_FORMAT(NOW(),'%Y-%m-%d'))]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{first_name: payload.first_name,
+last_name: payload.last_name,
+email: payload.email
+}]]]></db:input-parameters>
+		</db:insert>
+		<set-payload value="INSERTED" doc:name="Set Payload" doc:id="7e57bde0-819e-4e50-875a-63c61be1bd07" />
+	</flow>
+	<flow name="updateStudentLastName" doc:id="54921822-94aa-47cc-af78-8dbb19d30321" >
+		<http:listener doc:name="Listener" doc:id="efc2448d-152a-4b71-8172-97f6d8d3c130" config-ref="HTTP_Listener_config" path="/update"/>
+		<db:update doc:name="Update" doc:id="c7a89714-6cd7-4440-a0ac-7e45356c87a0" config-ref="Database_Config">
+			<db:sql ><![CDATA[UPDATE school.students
+SET last_name = :last_name
+WHERE student_id=:student_id AND first_name=:first_name]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{last_name:payload.last_name,
+first_name:payload.first_name,
+ student_id:payload.student_id
+}]]]></db:input-parameters>
+		</db:update>
+		<ee:transform doc:name="Transform Message" doc:id="59af42a6-ba72-4a6a-be9f-1c2d4576c7c7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="03d071d5-8c14-40d3-a46e-b500efd38862" >
+			<when expression="#[payload.affectedRows !=0]">
+				<set-payload value="Updated" doc:name="Set Payload" doc:id="62da6dbc-286f-4152-88c2-4da2e417243b" />
+			</when>
+			<otherwise >
+				<set-payload value='not in record"' doc:name="Set Payload" doc:id="c5e72735-e903-45e7-b533-fb4b930827d2" />
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="bulckInsert" doc:id="6d879d37-4062-476b-889d-dc9761c60908" >
+		<http:listener doc:name="Listener" doc:id="63e58e92-8f3b-4b21-b85d-36abbf4d7d00" config-ref="HTTP_Listener_config" path="bulk"/>
+		<db:bulk-insert doc:name="Bulk insert" doc:id="a9e2c307-d760-47f2-b1b7-7d6fbeb73cbc" config-ref="Database_Config">
+			<db:bulk-input-parameters ><![CDATA[#[payload map {
+	first_name:$.first_name,
+	last_name:$.last_name,
+	email:$.email
+	
+}]]]></db:bulk-input-parameters>
+			<db:sql ><![CDATA[INSERT INTO school.students(first_name,last_name,email,date_registred)
+VALUES(:first_name,:last_name,:email,NOW())]]></db:sql>
+		</db:bulk-insert>
+		<set-payload value="Done !" doc:name="Set Payload" doc:id="30eb8803-33ee-4dbe-a3fc-ca4198f12db5" />
+	</flow>
+	<flow name="bulkDelete" doc:id="0c12f20e-4dc4-4c99-bb8a-bbe9ab1f4a1a" >
+		<http:listener doc:name="Listener" doc:id="b41f64d5-e6fc-490d-bf1d-c09118ee665e" config-ref="HTTP_Listener_config" path="/bulkdelete"/>
+		<db:bulk-delete doc:name="Bulk delete" doc:id="cdd51b39-7031-4a92-8c5a-144e57d48112" config-ref="Database_Config">
+			<db:bulk-input-parameters ><![CDATA[#[payload map{
+	student_id:$.student_id
+}]]]></db:bulk-input-parameters>
+			<db:sql ><![CDATA[DELETE
+FROM school.students
+WHERE student_id = :student_id]]></db:sql>
+		</db:bulk-delete>
+		<set-payload value="Delete" doc:name="Set Payload" doc:id="7910510e-f25a-44bd-a541-69530def7ff8" />
+	</flow>
+</mule>

@@ -1,0 +1,34 @@
+[
+	{ 
+	"productid": 112,
+	"categoryid":10,
+ "name":"Amazon laptop",
+  "description":"best batter life, 15' laptop, with a 1-year warranty",
+  "video_url":"https://www.youtube.com/embed/Ic-Y3osvnFk", "price":5000},
+
+{
+	"productid": 113,
+"categoryid":12, "name":"Google Home",
+ "description":"Google home lets you automate stuff. It's cool.",
+  "video_url":"https://www.youtube.com/embed/r0iLfAV0pIg", "price":6000},
+  {
+  	"productid": 114,
+"categoryid":12, "name":"Google Home",
+ "description":"Google home lets you automate stuff. It's cool.",
+  "video_url":"https://www.youtube.com/embed/r0iLfAV0pIg", "price":8000},
+  {
+  	"productid": 115,
+"categoryid":12, "name":"Google Home",
+ "description":"Google home lets you automate stuff. It's cool.",
+  "video_url":"https://www.youtube.com/embed/r0iLfAV0pIg", "price":4000},
+   {
+  	"productid": 116,
+"categoryid":12, "name":"Google Home",
+ "description":"Google home lets you automate stuff. It's cool.",
+  "video_url":"https://www.youtube.com/embed/r0iLfAV0pIg", "price":7000},
+  {
+  	"productid": 117,
+"categoryid":12, "name":"Google Home",
+ "description":"Google home lets you automate stuff. It's cool.",
+  "video_url":"https://www.youtube.com/embed/r0iLfAV0pIg", "price":100000}
+ ]
